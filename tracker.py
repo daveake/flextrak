@@ -15,6 +15,9 @@ def take_photo(filename, width, height, gps):
 		camera.capture(filename)
 		camera.stop_preview()					
 
+def GotNewSentence(Sentence):
+    print('New Sentence: ' + Sentence)
+
 def GotNewPosition(Position):
     print(str(Position['time']) + ',' + str(Position['lat']) + ', ' + str(Position['lon']) + ', ' + str(Position['alt']) + ', ' + str(Position['sats']))
 
@@ -27,6 +30,8 @@ mytracker.LoadSettings("flextrak.ini")
 
 # mytracker.set_image_callback(take_photo)
 
+# Callbacks
+mytracker.WhenNewSentence = GotNewSentence
 mytracker.WhenNewPosition = GotNewPosition
 
 print ("Start tracker ...")

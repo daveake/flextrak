@@ -12,6 +12,7 @@ class AVR(object):
         self._WhenLockGained = None
         self._WhenLockLost = None
         self._WhenNewPosition = None
+        self._WhenNewSentence = None
         self.IsOpen = False
         self.GPSPosition = {'time': '00:00:00', 'lat': 0.0, 'lon': 0.0, 'alt': 0, 'sats': 0, 'fixtype': 0}
         
@@ -49,7 +50,12 @@ class AVR(object):
             self.GPSPosition['sats'] = int(Fields[5])
             if self._WhenNewPosition:
                 self._WhenNewPosition(self.GPSPosition)
-            
+        elif Command == 'LORA':
+
+            if self._WhenNewSentence:
+                self._WhenNewSentence(Parameters)
+        else:
+            print("UNKOWN RESPONSE " + Command + '=' + Parameters)
 
     def ProcessLine(self, Line):
         
@@ -113,6 +119,14 @@ class AVR(object):
     @WhenLockLost.setter
     def WhenLockGained(self, value):
         self._WhenLockLost = value
+    
+    @property
+    def WhenNewSentence(self):
+        return self._WhenNewSentence
+
+    @WhenNewSentence.setter
+    def WhenNewSentence(self, value):
+        self._WhenNewSentence = value
     
     @property
     def WhenNewPosition(self):

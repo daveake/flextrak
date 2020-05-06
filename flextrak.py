@@ -12,13 +12,18 @@ class Tracker(object):
         self.SentenceCallback = None
         self.ImageCallback = None
         self._WhenNewPosition = None
+        self._WhenNewSentence = None
         print ("FlexTrak Module Loaded")
+        
+    def GotNewSentence(self, Sentence):
+        if self._WhenNewSentence:
+            self._WhenNewSentence(Sentence)
         
     def GotNewPosition(self, Position):
         # print(str(Position['time']) + ',' + str(Position['lat']) + ', ' + str(Position['lon']) + ', ' + str(Position['alt']) + ', ' + str(Position['sats']))
         if self._WhenNewPosition:
             self._WhenNewPosition(Position)
-        
+
     def LoadSettings(self, filename):
         print ("Loaded " + filename)
 
@@ -72,6 +77,15 @@ class Tracker(object):
     def __ImageCallback(self, filename, width, height):
         self.ImageCallback(filename, width, height, self.gps)
 
+
+    @property
+    def WhenNewSentence(self):
+        return self._WhenNewSentence
+
+    @WhenNewSentence.setter
+    def WhenNewSentence(self, value):
+        self._WhenNewSentence = value
+
     @property
     def WhenNewPosition(self):
         return self._WhenNewPosition
@@ -90,6 +104,7 @@ class Tracker(object):
         """
 
         self.avr = AVR()
+        self.avr.WhenNewSentence = self.GotNewSentence
         self.avr.WhenNewPosition = self.GotNewPosition
         self.avr.start()
 
