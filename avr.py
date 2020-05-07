@@ -21,12 +21,11 @@ class AVR(object):
         self.ser.baudrate = 38400
         self.ser.stopbits = 1
         self.ser.bytesize = 8
+        self.ser.timeout = 0
         self.ser.port = Device
+        
+        self.Commands = []
     
-    def Send(self, Bytes):
-        print("Send " + str(len(Bytes)) + " bytes")
-        self.ser.write(Bytes)
-
 
     def ProcessCommand(self, Command, Parameters):       
         if Command == 'GPS':
@@ -60,34 +59,58 @@ class AVR(object):
     def ProcessLine(self, Line):
         
         # print(Line);
-        
-        fields = Line.split('=', 2)
-        
-        if len(fields) == 2:
-            self.ProcessCommand(fields[0], fields[1])
-        else:
+        if Line == '*':
             print(Line)
+            self.CanSendNextCommand = True
+        else:
+            fields = Line.split('=', 2)
+            
+            if len(fields) == 2:
+                self.ProcessCommand(fields[0], fields[1])
+            else:
+                print(Line)
                 
+    def AddCommand(self, Command):
+        self.Commands.append(Command)
+        
     def __comms_thread(self):
         print ("Comms thread")
+        self.CanSendNextCommand = True
         Line = ''
+        TimeOut = 0
 
         while True:
             if self.IsOpen:
+                # Do incoming characters
                 Byte = self.ser.read(1)
                 
-                Character = chr(Byte[0])
+                if len(Byte) > 0:
+                    Character = chr(Byte[0])
 
-                if len(Line) > 256:
-                    Line = ''
-                elif Character != '\r':
-                    if Character == '\n':
-                        self.ProcessLine(Line)
-                        
+                    if len(Line) > 256:
                         Line = ''
-                        time.sleep(0.1)
-                    else:
-                        Line = Line + Character
+                    elif Character != '\r':
+                        if Character == '\n':
+                            self.ProcessLine(Line)
+                            
+                            Line = ''
+                            time.sleep(0.1)
+                        else:
+                            Line = Line + Character
+                        
+                if self.CanSendNextCommand or (TimeOut <= 0):
+                    if len(self.Commands) > 0:
+                        print("CAN SEND")
+                        Command = '~' + self.Commands[0] + '\r\n'
+                        print ('TX: ' + Command)
+                        self.ser.write(Command.encode())
+                        TimeOut = 2000
+                        self.CanSendNextCommand = False
+                        self.Commands = self.Commands[1:]
+                
+                if TimeOut > 0:
+                    TimeOut -= 1
+                        
             else:
                 time.sleep(1)
 

@@ -2,9 +2,18 @@
 from avr import *
 
 from time import sleep
+import os
 import threading
 import configparser
 
+Modes=[{'implicit': 0, 'coding': 8, 'bandwidth': 20.8, 'spreading': 11, 'lowopt': 1},
+       {'implicit': 1, 'coding': 5, 'bandwidth': 20.8, 'spreading':  6, 'lowopt': 0},
+       {'implicit': 0, 'coding': 8, 'bandwidth': 62.5, 'spreading':  8, 'lowopt': 0},
+       {'implicit': 0, 'coding': 6, 'bandwidth':  250, 'spreading':  7, 'lowopt': 0},
+       {'implicit': 1, 'coding': 5, 'bandwidth':  250, 'spreading':  6, 'lowopt': 0},
+       {'implicit': 0, 'coding': 8, 'bandwidth': 41.7, 'spreading': 11, 'lowopt': 0},
+       {'implicit': 1, 'coding': 5, 'bandwidth': 41.7, 'spreading':  6, 'lowopt': 0}]
+       
 class Tracker(object):
     def __init__(self):
         self.camera = None
@@ -13,6 +22,17 @@ class Tracker(object):
         self.ImageCallback = None
         self._WhenNewPosition = None
         self._WhenNewSentence = None
+
+        # General settings
+        self.Settings_General_SerialDevice = '/dev/ttyAMA0';
+        self.Settings_General_PayloadID = 'CHANGEME'
+        self.Settings_General_FieldList = '01234569A'
+        
+        # LoRa settings
+        self.Settings_LoRa_Frequency = 434.225
+        self.Settings_LoRa_Mode = 1
+        
+        
         print ("FlexTrak Module Loaded")
         
     def GotNewSentence(self, Sentence):
@@ -25,7 +45,53 @@ class Tracker(object):
             self._WhenNewPosition(Position)
 
     def LoadSettings(self, filename):
-        print ("Loaded " + filename)
+        if os.path.isfile(filename):
+            print ('Loading config file ' + filename)
+            config = configparser.RawConfigParser()   
+            config.read(filename)
+                                
+            # General settings
+            self.Settings_General_SerialDevice = config.get('General', 'SerialDevice')
+            self.Settings_General_PayloadID = config.get('General', 'PayloadID')
+            self.Settings_General_FieldList = config.get('General', 'FieldList')
+            
+            # GPS Settings
+            self.Settings_GPS_FlightModeAltitude = config.get('GPS', 'FlightModeAltitude')
+            
+            # LoRa settings
+            self.Settings_LoRa_Frequency = config.get('LORA', 'Frequency')
+            self.Settings_LoRa_Mode = config.getint('LORA', 'Mode')
+            
+            
+    def SendSettings(self):
+        self.avr.AddCommand('CV');		# Request Firmware Version
+        
+        # // Common Settings
+        self.avr.AddCommand('CP' + self.Settings_General_PayloadID)
+        self.avr.AddCommand('CF' + self.Settings_General_FieldList);
+        
+        # // GPS Settings
+        self.avr.AddCommand('GF' + str(self.Settings_GPS_FlightModeAltitude));
+        
+        # // LoRa Settings
+        self.avr.AddCommand('LF' + str(self.Settings_LoRa_Frequency));
+        
+        self.avr.AddCommand('LI' + str(Modes[self.Settings_LoRa_Mode]['implicit']))
+        self.avr.AddCommand('LE' + str(Modes[self.Settings_LoRa_Mode]['coding']))
+        self.avr.AddCommand('LB' + str(Modes[self.Settings_LoRa_Mode]['bandwidth']))
+        self.avr.AddCommand('LS' + str(Modes[self.Settings_LoRa_Mode]['spreading']))
+        self.avr.AddCommand('LL' + str(Modes[self.Settings_LoRa_Mode]['lowopt']))
+        
+        # self.avr.AddCommand('LC' + str(self.Settings_LoRa_Count);
+        # LORA_Count:			Integer;
+        # LORA_CycleTime:		Integer;
+        # LORA_Slot:			Integer;
+        
+        # // SSDV Settings
+        # self.avr.AddCommand('SI' + str(Settings.SSDV_ImageCount))
+
+        self.avr.AddCommand('CS');			# Store settings
+    
 
     def set_lora(self, payload_id='CHANGEME', channel=0, frequency=424.250, mode=1, camera=False, image_packet_ratio=6):
         """
@@ -103,10 +169,12 @@ class Tracker(object):
         Starts the tracker.
         """
 
-        self.avr = AVR()
+        self.avr = AVR(self.Settings_General_SerialDevice)
         self.avr.WhenNewSentence = self.GotNewSentence
         self.avr.WhenNewPosition = self.GotNewPosition
         self.avr.start()
+        
+        self.SendSettings()
 
         if self.camera:
             if self.ImageCallback:
