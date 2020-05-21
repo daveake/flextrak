@@ -1,18 +1,18 @@
-# from .camera import *
+from camera import *
 from avr import *
-
+from prediction import *
 from time import sleep
 import os
 import threading
 import configparser
 
-Modes=[{'implicit': 0, 'coding': 8, 'bandwidth': 20.8, 'spreading': 11, 'lowopt': 1},
-       {'implicit': 1, 'coding': 5, 'bandwidth': 20.8, 'spreading':  6, 'lowopt': 0},
-       {'implicit': 0, 'coding': 8, 'bandwidth': 62.5, 'spreading':  8, 'lowopt': 0},
-       {'implicit': 0, 'coding': 6, 'bandwidth':  250, 'spreading':  7, 'lowopt': 0},
-       {'implicit': 1, 'coding': 5, 'bandwidth':  250, 'spreading':  6, 'lowopt': 0},
-       {'implicit': 0, 'coding': 8, 'bandwidth': 41.7, 'spreading': 11, 'lowopt': 0},
-       {'implicit': 1, 'coding': 5, 'bandwidth': 41.7, 'spreading':  6, 'lowopt': 0}]
+Modes=[{'implicit': 0, 'coding': 8, 'bandwidth': 3, 'spreading': 11, 'lowopt': 1},
+       {'implicit': 1, 'coding': 5, 'bandwidth': 3, 'spreading':  6, 'lowopt': 0},
+       {'implicit': 0, 'coding': 8, 'bandwidth': 6, 'spreading':  8, 'lowopt': 0},
+       {'implicit': 0, 'coding': 6, 'bandwidth': 8, 'spreading':  7, 'lowopt': 0},
+       {'implicit': 1, 'coding': 5, 'bandwidth': 8, 'spreading':  6, 'lowopt': 0},
+       {'implicit': 0, 'coding': 8, 'bandwidth': 5, 'spreading': 11, 'lowopt': 0},
+       {'implicit': 1, 'coding': 5, 'bandwidth': 5, 'spreading':  6, 'lowopt': 0}]
        
 class Tracker(object):
     def __init__(self):
@@ -22,15 +22,19 @@ class Tracker(object):
         self.ImageCallback = None
         self._WhenNewPosition = None
         self._WhenNewSentence = None
+        self.SendNextSSDVPacket = False
+        self.Predictor = None
 
         # General settings
         self.Settings_General_SerialDevice = '/dev/ttyAMA0';
         self.Settings_General_PayloadID = 'CHANGEME'
         self.Settings_General_FieldList = '01234569A'
+        self.Settings_General_FakeGPS = ''
         
         # LoRa settings
         self.Settings_LoRa_Frequency = 434.225
         self.Settings_LoRa_Mode = 1
+        
         
         
         print ("FlexTrak Module Loaded")
@@ -44,6 +48,22 @@ class Tracker(object):
         if self._WhenNewPosition:
             self._WhenNewPosition(Position)
 
+        # Send to predictor
+        if self.Predictor:
+            LandingPrediction = self.Predictor.AddGPSPosition(Position)
+            if LandingPrediction:
+                # Should get one of these during flight, every 5 seconds currently
+                # Send to AVR
+                self.avr.AddCommand('FA' + "{:.5f}".format(LandingPrediction['pred_lat']))
+                self.avr.AddCommand('FO' + "{:.5f}".format(LandingPrediction['pred_lon']))
+
+        # Send to camera
+        if self.camera:
+            self.camera.SetAltitude(Position['alt'])
+
+    def SSDVBufferEmpty(self):
+        self.SendNextSSDVPacket = True
+
     def LoadSettings(self, filename):
         if os.path.isfile(filename):
             print ('Loading config file ' + filename)
@@ -54,6 +74,7 @@ class Tracker(object):
             self.Settings_General_SerialDevice = config.get('General', 'SerialDevice')
             self.Settings_General_PayloadID = config.get('General', 'PayloadID')
             self.Settings_General_FieldList = config.get('General', 'FieldList')
+            self.Settings_General_FakeGPS = config.get('General', 'FakeGPS')
             
             # GPS Settings
             self.Settings_GPS_FlightModeAltitude = config.get('GPS', 'FlightModeAltitude')
@@ -62,8 +83,54 @@ class Tracker(object):
             self.Settings_LoRa_Frequency = config.get('LORA', 'Frequency')
             self.Settings_LoRa_Mode = config.getint('LORA', 'Mode')
             
+            # Camera settings
+            # Altitude for switching image sizes and packet rates
+            self.Settings_Camera_High = config.getint('Camera', 'High')
+            self.Settings_Camera_Rotate = config.getboolean('Camera', 'Rotate')
+            
+            # Full settings, low altitude
+            self.Settings_Camera_LowFullPeriod = config.getint('Camera', 'LowFullPeriod')
+            self.Settings_Camera_LowFullWidth = config.getint('Camera', 'LowFullHeight')
+            self.Settings_Camera_LowFullHeight = config.getint('Camera', 'LowFullHeight')
+                
+            # Full settings, high altitude
+            self.Settings_Camera_HighFullPeriod = config.getint('Camera', 'HighFullPeriod')
+            self.Settings_Camera_HighFullWidth = config.getint('Camera', 'HighFullHeight')
+            self.Settings_Camera_HighFullHeight = config.getint('Camera', 'HighFullHeight')
+            
+            # Add schedule for full size images
+            if (self.Settings_Camera_LowFullPeriod > 0) or (self.Settings_Camera_HighFullPeriod > 0):
+                self.add_full_camera_schedule(lowperiod=self.Settings_Camera_LowFullPeriod, lowwidth=self.Settings_Camera_LowFullWidth, lowheight=self.Settings_Camera_LowFullHeight,
+                                              highperiod=self.Settings_Camera_HighFullPeriod, highwidth=self.Settings_Camera_HighFullWidth, highheight=self.Settings_Camera_HighFullHeight)
+                
+            # Radio settings, low altitude
+            self.Settings_Camera_LowRadioPeriod = config.getint('Camera', 'LowRadioPeriod')
+            self.Settings_Camera_LowRadioWidth = config.getint('Camera', 'LowRadioWidth')
+            self.Settings_Camera_LowRadioHeight = config.getint('Camera', 'LowRadioHeight')
+                           
+            # Full settings, high altitude
+            self.Settings_Camera_HighRadioPeriod = config.getint('Camera', 'HighRadioPeriod')
+            self.Settings_Camera_HighRadioWidth = config.getint('Camera', 'HighRadioWidth')
+            self.Settings_Camera_HighRadioHeight = config.getint('Camera', 'HighRadioHeight')
+            #self.add_lora_camera_schedule(callsign=self.Settings_General_PayloadID, period=self.Settings_Camera_RadioPeriod, width=self.Settings_Camera_RadioWidth, height=self.Settings_Camera_RadioHeight)
+            
+            # Add schedule for radio
+            if (self.Settings_Camera_LowRadioPeriod > 0) or (self.Settings_Camera_HighRadioPeriod):
+                self.add_lora_camera_schedule(callsign=self.Settings_General_PayloadID,
+                                              lowperiod=self.Settings_Camera_LowRadioPeriod, lowwidth=self.Settings_Camera_LowRadioWidth, lowheight=self.Settings_Camera_LowRadioHeight,
+                                              highperiod=self.Settings_Camera_HighRadioPeriod, highwidth=self.Settings_Camera_HighRadioWidth, highheight=self.Settings_Camera_HighRadioHeight)
+            # SSDV settings
+            self.Settings_SSDV_LowImageCount = config.getint('SSDV', 'LowImageCount')
+            self.Settings_SSDV_HighImageCount = config.getint('SSDV', 'HighImageCount')
+            
+            # Predictor settings
+            self.Settings_Prediction_Enabled = config.getboolean('Prediction', 'Enabled')
+            self.Settings_Prediction_LandingAltitude = config.getint('Prediction', 'LandingAltitude')
+            self.Settings_Prediction_DefaultCDA = config.getfloat('Prediction', 'DefaultCDA')
             
     def SendSettings(self):
+        self.avr.AddCommand('CH0')      # Low priority mode
+
         self.avr.AddCommand('CV');		# Request Firmware Version
         
         # // Common Settings
@@ -88,7 +155,7 @@ class Tracker(object):
         # LORA_Slot:			Integer;
         
         # // SSDV Settings
-        # self.avr.AddCommand('SI' + str(Settings.SSDV_ImageCount))
+        self.avr.AddCommand('SI' + str(self.Settings_SSDV_LowImageCount) + ',' + str(self.Settings_SSDV_HighImageCount) + ',' + str(self.Settings_Camera_High))
 
         self.avr.AddCommand('CS');			# Store settings
     
@@ -108,25 +175,22 @@ class Tracker(object):
 
         # self.lora = LoRa(Channel=self.LoRaChannel, Frequency=self.LoRaFrequency, Mode=self.LoRaMode, DIO0=DIO0)
 
-    def add_camera_schedule(self, path='images/LORA', period=60, width=640, height=480):
+    def add_lora_camera_schedule(self, callsign='SSDV', path='images/LORA', lowperiod=60, lowwidth=320, lowheight=240, highperiod=30, highwidth=640, highheight=480):
         """
         Adds a LoRa camera schedule.  The default parameters are for an image of size 640x480 pixels every 60 seconds and the resulting file saved in the images/LORA folder.
         """
         if not self.camera:
-            self.camera = SSDVCamera()
-        if self.LoRaMode == 1:
-            print("Enable camera for LoRa")
-            self.camera.add_schedule('LoRa0', self.LoRaPayloadID, path, period, width, height)
-        else:
-            print("LoRa camera schedule not added - LoRa mode needs to be set to 1 not 0")
+            self.camera = SSDVCamera(self.Settings_Camera_High, self.Settings_Camera_Rotate)
+        print("Enable camera for LoRa")
+        self.camera.add_schedule('LoRa', callsign, path, lowperiod, lowwidth, lowheight, highperiod, highwidth, highheight)
 
-    def add_full_camera_schedule(self, path='images/FULL', period=60, width=0, height=0):
+    def add_full_camera_schedule(self, path='images/FULL', lowperiod=60, lowwidth=0, lowheight=0, highperiod=30, highwidth=0, highheight=0):
         """
         Adds a camera schedule for full-sized images.  The default parameters are for an image of full sensor resolution, every 60 seconds and the resulting file saved in the images/FULL folder.
         """
         if not self.camera:
-            self.camera = SSDVCamera()
-        self.camera.add_schedule('FULL', '', path, period, width, height)
+            self.camera = SSDVCamera(self.Settings_Camera_High)
+        self.camera.add_schedule('FULL', '', path, lowperiod, lowwidth, lowheight, highperiod, highwidth, highheight)
 
     def set_sentence_callback(self, callback):
         """
@@ -162,6 +226,16 @@ class Tracker(object):
 
     def __tracker_thread(self):
         while True:
+            # test if we need to send next SSDV packet yet
+            if self.camera:
+                if self.SendNextSSDVPacket:
+                    # print ("GET NEXT SSDV PACKET")
+                    Packet = self.camera.get_next_ssdv_packet('LoRa')
+                    if Packet:
+                        self.SendNextSSDVPacket = False
+                        print ("GOT NEXT SSDV PACKET")
+                        self.avr.SendPacket(Packet)
+                    
             sleep(0.01)
 
     def start(self):
@@ -169,18 +243,29 @@ class Tracker(object):
         Starts the tracker.
         """
 
-        self.avr = AVR(self.Settings_General_SerialDevice)
+        # AVR
+        self.avr = AVR(self.Settings_General_SerialDevice, self.Settings_General_FakeGPS)
         self.avr.WhenNewSentence = self.GotNewSentence
         self.avr.WhenNewPosition = self.GotNewPosition
+        self.avr.WhenSSDVReady = self.SSDVBufferEmpty
+        
         self.avr.start()
         
         self.SendSettings()
 
+        self.avr.AddCommand('SC');		# Clear SSDV buffer
+        self.avr.AddCommand('SS');		# Request SSDV status
+        
+        # Camera
         if self.camera:
             if self.ImageCallback:
                 self.camera.take_photos(self.__ImageCallback)
             else:
                 self.camera.take_photos(None)
+
+        # Predictor
+        if self.Settings_Prediction_Enabled:
+            self.Predictor = Predictor(self.Settings_Prediction_LandingAltitude, self.Settings_Prediction_DefaultCDA)
 
         t = threading.Thread(target=self.__tracker_thread)
         t.daemon = True
