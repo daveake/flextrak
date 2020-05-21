@@ -33,9 +33,7 @@ class Tracker(object):
         
         # LoRa settings
         self.Settings_LoRa_Frequency = 434.225
-        self.Settings_LoRa_Mode = 1
-        
-        
+        self.Settings_LoRa_Mode = 1      
         
         print ("FlexTrak Module Loaded")
         
@@ -47,6 +45,12 @@ class Tracker(object):
         # print(str(Position['time']) + ',' + str(Position['lat']) + ', ' + str(Position['lon']) + ', ' + str(Position['alt']) + ', ' + str(Position['sats']))
         if self._WhenNewPosition:
             self._WhenNewPosition(Position)
+        
+        # Send to AVR if we are faking GPS
+        if self.Settings_General_FakeGPS != '':
+            self.avr.AddCommand('FT' + "{:.5f}".format(Position['lat']))
+            self.avr.AddCommand('FG' + "{:.5f}".format(Position['lon']))
+            self.avr.AddCommand('FU' + str(int(Position['alt'])))
 
         # Send to predictor
         if self.Predictor:
