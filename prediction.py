@@ -141,7 +141,7 @@ class Predictor(object):
                 elif self.FlightMode == FlightMode.fmDescending:
                     # Coming down - try and calculate how well chute is doing
 
-                    self.CDA = (self.CDA * 4 + self.CalculateCDA(1.0, Position['alt']/2 + self.PreviousPosition['alt']/2, (PreviousAltitude - Position['alt']) / self.PollPeriod)) / 5
+                    self.CDA = (self.CDA * 4 + self.CalculateCDA(1.0, Position['alt']/2 + self.PreviousPosition['alt']/2, (self.PreviousPosition['alt'] - Position['alt']) / self.PollPeriod)) / 5
                 
                 
                 if (self.FlightMode == FlightMode.fmLaunched) or (self.FlightMode == FlightMode.fmDescending):
