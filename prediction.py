@@ -25,7 +25,7 @@ class Predictor(object):
         self.LandingAltitude = LandingAltitude
         self.LandingLatitude = 0.0
         self.LandingLongitude = 0.0
-        self.PollRate = 5
+        self.PollPeriod = 5
         self.Counter = 0
         self.CDA = DefaultCDA
         for i in range(self.SlotCount):
@@ -64,11 +64,14 @@ class Predictor(object):
         return math.sqrt((Weight * 9.81)/(0.5 * Density * CDTimesArea))
             
     def CalculateCDA(self, Weight, Altitude, DescentRate):
-        Density = CalculateAirDensity(Altitude)
+        if DescentRate > 0.0:
+            Density = self.CalculateAirDensity(Altitude)
 	
-        # printf("Alt %.0lf, Rate %.1lf, CDA %.1lf\n", Altitude, DescentRate, (Weight * 9.81)/(0.5 * Density * DescentRate * DescentRate));
-
-        return (Weight * 9.81)/(0.5 * Density * DescentRate * DescentRate)
+            # printf("Alt %.0lf, Rate %.1lf, CDA %.1lf\n", Altitude, DescentRate, (Weight * 9.81)/(0.5 * Density * DescentRate * DescentRate));
+        
+            return (Weight * 9.81)/(0.5 * Density * DescentRate * DescentRate)
+        else:
+            return self.CDA
             
     def CalculateLandingPosition(self, Latitude, Longitude, Altitude):
         TimeTillLanding = 0;
@@ -102,7 +105,7 @@ class Predictor(object):
         
         if Position['sats'] >= 4:
             self.Counter = self.Counter + 1
-            if self.Counter >= self.PollRate:
+            if self.Counter >= self.PollPeriod:
                 self.Counter = 0
                 
                 if Position['alt'] <= 0:
@@ -134,8 +137,8 @@ class Predictor(object):
                     Slot = self.GetSlot(Position['alt']/2 + self.PreviousPosition['alt']/2);
                         
                     # Deltas are scaled to be horizontal distance per second (i.e. speed)
-                    self.Deltas[Slot].latitude = (Position['lat'] - self.PreviousPosition['lat']) / self.PollRate
-                    self.Deltas[Slot].longitude = (Position['lon'] - self.PreviousPosition['lon']) / self.PollRate
+                    self.Deltas[Slot].latitude = (Position['lat'] - self.PreviousPosition['lat']) / self.PollPeriod
+                    self.Deltas[Slot].longitude = (Position['lon'] - self.PreviousPosition['lon']) / self.PollPeriod
                     
                     print("Slot " + str(Slot) + " = " + str(Position['alt']) + "," + str(self.Deltas[Slot].latitude) + "," + str(self.Deltas[Slot].longitude))
                 elif self.FlightMode == FlightMode.fmDescending:
