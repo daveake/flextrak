@@ -78,7 +78,10 @@ class Tracker(object):
             self.Settings_General_SerialDevice = config.get('General', 'SerialDevice')
             self.Settings_General_PayloadID = config.get('General', 'PayloadID')
             self.Settings_General_FieldList = config.get('General', 'FieldList')
-            self.Settings_General_FakeGPS = config.get('General', 'FakeGPS')
+            try:
+                self.Settings_General_FakeGPS = config.get('General', 'FakeGPS')
+            except:
+                pass
             
             # GPS Settings
             self.Settings_GPS_FlightModeAltitude = config.get('GPS', 'FlightModeAltitude')
