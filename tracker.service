@@ -1,0 +1,10 @@
+[Unit]
+Description=FlexTrak Tracker Service
+ 
+[Service]
+ExecStart=/home/pi/flextrak/startup
+StandardOutput=null
+ 
+[Install]
+WantedBy=multi-user.target
+Alias=tracker.service

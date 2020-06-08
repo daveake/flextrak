@@ -1,0 +1,9 @@
+#!/bin/bash
+cd /home/pi/flextrak
+sleep 10
+while :
+do
+	python3 tracker.py
+	sleep 5
+done
+
