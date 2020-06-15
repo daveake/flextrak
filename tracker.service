@@ -4,6 +4,7 @@ Description=FlexTrak Tracker Service
 [Service]
 ExecStart=/home/pi/flextrak/startup
 StandardOutput=null
+User=pi
  
 [Install]
 WantedBy=multi-user.target

@@ -196,7 +196,7 @@ class Tracker(object):
         Adds a camera schedule for full-sized images.  The default parameters are for an image of full sensor resolution, every 60 seconds and the resulting file saved in the images/FULL folder.
         """
         if not self.camera:
-            self.camera = SSDVCamera(self.Settings_Camera_High)
+            self.camera = SSDVCamera(self.Settings_Camera_High, self.Settings_Camera_Rotate)
         self.camera.add_schedule('FULL', '', path, lowperiod, lowwidth, lowheight, highperiod, highwidth, highheight)
 
     def set_sentence_callback(self, callback):
