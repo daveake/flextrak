@@ -120,10 +120,11 @@ class AVR(object):
 
     def ProcessLine(self, Line):
         
-        # print('Rx: ' + Line);
+        print('Rx: ' + Line);
         
         if Line == '*':
             print(Line)
+            self.Commands = self.Commands[1:]
             self.CanSendNextCommand = True
         else:
             fields = Line.split('=', 2)
@@ -167,7 +168,7 @@ class AVR(object):
                         time.sleep(0.01)
                 
                 
-                if self.CanSendNextCommand: # or (TimeOut <= 0):
+                if self.CanSendNextCommand or (TimeOut <= 0):
                     if len(self.Commands) > 0:
                         # print("CAN SEND")
                         Command = '~' + self.Commands[0] + '\r\n'
@@ -179,13 +180,13 @@ class AVR(object):
                             HighPriorityMode = False
                         TimeOut = 2000
                         self.CanSendNextCommand = False
-                        self.Commands = self.Commands[1:]
                 
                     
-                # if TimeOut > 0:
-                    # TimeOut -= 1
+                if TimeOut > 0:
+                    TimeOut -= 1
                         
             else:
+                print("Waiting for port")
                 time.sleep(1)
 
     def open(self):
