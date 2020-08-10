@@ -24,7 +24,7 @@ def GotNewPosition(Position):
 print ("Load tracker ...")
 mytracker = Tracker()
 
-mytracker.LoadSettings("/boot/flextrak.ini")
+mytracker.LoadSettings("flextrak.ini")
 
 # Callbacks
 mytracker.WhenNewSentence = GotNewSentence

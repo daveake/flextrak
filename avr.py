@@ -8,7 +8,7 @@ class AVR(object):
     PortOpen = False
     
     def __init__(self, Device='/dev/ttyAMA0', GPSFileName=''):
-        print ("AVR module init")
+        print ("AVR module init - device " + Device)
         self._WhenLockGained = None
         self._WhenLockLost = None
         self._WhenNewPosition = None
@@ -120,7 +120,8 @@ class AVR(object):
 
     def ProcessLine(self, Line):
         
-        # print(Line);
+        # print('Rx: ' + Line);
+        
         if Line == '*':
             print(Line)
             self.CanSendNextCommand = True
@@ -172,9 +173,9 @@ class AVR(object):
                         Command = '~' + self.Commands[0] + '\r\n'
                         self.ser.write(Command.encode())
                         print ('TX: ' + self.Commands[0])
-                        if self.Commands[0] == '~CH1':
+                        if self.Commands[0] == 'CH1':
                             HighPriorityMode = True
-                        if self.Commands[0] == '~CH0':
+                        if self.Commands[0] == 'CH0':
                             HighPriorityMode = False
                         TimeOut = 2000
                         self.CanSendNextCommand = False

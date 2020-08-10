@@ -35,6 +35,9 @@ class Tracker(object):
         self.Settings_LoRa_Frequency = 434.225
         self.Settings_LoRa_Mode = 1      
         
+        # APRS Settings
+        self.Settings_APRS_Callsign = ''
+        
         print ("FlexTrak Module Loaded")
         
     def GotNewSentence(self, Sentence):
@@ -76,7 +79,9 @@ class Tracker(object):
                                 
             # General settings
             self.Settings_General_SerialDevice = config.get('General', 'SerialDevice')
+            print ('Serial device ' + self.Settings_General_SerialDevice)
             self.Settings_General_PayloadID = config.get('General', 'PayloadID')
+            print ('Payload ID ' + self.Settings_General_PayloadID)
             self.Settings_General_FieldList = config.get('General', 'FieldList')
             try:
                 self.Settings_General_FakeGPS = config.get('General', 'FakeGPS')
@@ -134,6 +139,20 @@ class Tracker(object):
             self.Settings_Prediction_Enabled = config.getboolean('Prediction', 'Enabled')
             self.Settings_Prediction_LandingAltitude = config.getint('Prediction', 'LandingAltitude')
             self.Settings_Prediction_DefaultCDA = config.getfloat('Prediction', 'DefaultCDA')
+
+            # APRS settings
+            try:
+                self.Settings_APRS_Callsign = config.get('APRS', 'Callsign')
+                self.Settings_APRS_SSID = config.getint('APRS', 'SSID')
+                self.Settings_APRS_Frequency = config.getfloat('APRS', 'Frequency')
+                self.Settings_APRS_WideAltitude = config.getint('APRS', 'WideAltitude')
+                self.Settings_APRS_HighUseWide2 = config.getboolean('APRS', 'HighUseWide2')
+                self.Settings_APRS_TxInterval = config.getint('APRS', 'TxInterval')
+                self.Settings_APRS_PreEmphasis = config.getboolean('APRS', 'PreEmphasis')
+                self.Settings_APRS_Random = config.getint('APRS', 'Random')
+                self.Settings_APRS_TelemInterval = config.getint('APRS', 'TelemInterval')
+            except:
+                self.Settings_APRS_Callsign = ''
             
     def SendSettings(self):
         self.avr.AddCommand('CH0')      # Low priority mode
@@ -142,13 +161,13 @@ class Tracker(object):
         
         # // Common Settings
         self.avr.AddCommand('CP' + self.Settings_General_PayloadID)
-        self.avr.AddCommand('CF' + self.Settings_General_FieldList);
+        self.avr.AddCommand('CF' + self.Settings_General_FieldList)
         
         # // GPS Settings
-        self.avr.AddCommand('GF' + str(self.Settings_GPS_FlightModeAltitude));
+        self.avr.AddCommand('GF' + str(self.Settings_GPS_FlightModeAltitude))
         
         # // LoRa Settings
-        self.avr.AddCommand('LF' + str(self.Settings_LoRa_Frequency));
+        self.avr.AddCommand('LF' + str(self.Settings_LoRa_Frequency))
         
         self.avr.AddCommand('LI' + str(Modes[self.Settings_LoRa_Mode]['implicit']))
         self.avr.AddCommand('LE' + str(Modes[self.Settings_LoRa_Mode]['coding']))
@@ -163,6 +182,18 @@ class Tracker(object):
         
         # // SSDV Settings
         self.avr.AddCommand('SI' + str(self.Settings_SSDV_LowImageCount) + ',' + str(self.Settings_SSDV_HighImageCount) + ',' + str(self.Settings_Camera_High))
+
+        # APRS settings
+        self.avr.AddCommand('AP' + self.Settings_APRS_Callsign)
+        if self.Settings_APRS_Callsign != '':
+            self.avr.AddCommand('AS' + str(self.Settings_APRS_SSID))
+            self.avr.AddCommand('AF' + "{:.3f}".format(self.Settings_APRS_Frequency))
+            self.avr.AddCommand('AA' + str(Settings_APRS_WideAltitude))
+            self.avr.AddCommand('AI' + str(int(self.Settings_APRS_HighUseWide2)))
+            self.avr.AddCommand('AI' + str(self.Settings_APRS_TxInterval))
+            self.avr.AddCommand('AM' + str(int(self.Settings_APRS_PreEmphasis)))
+            self.avr.AddCommand('AR' + str(self.Settings_APRS_Random))
+            self.avr.AddCommand('AT' + str(self.Settings_APRS_TelemInterval))
 
         self.avr.AddCommand('CS');			# Store settings
     

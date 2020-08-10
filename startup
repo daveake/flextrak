@@ -1,9 +1,11 @@
 #!/bin/bash
 cd /home/pi/flextrak
 sleep 10
+echo Copying config file /boot/flextrak.ini to /home/pi/flextrak/flextrak.ini
+cp /boot/flextrak.ini flextrak.ini
+chmod 666 flextrak.ini
 while :
 do
 	python3 tracker.py
 	sleep 5
 done
-
