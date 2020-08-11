@@ -13,7 +13,10 @@ Modes=[{'implicit': 0, 'coding': 8, 'bandwidth': 3, 'spreading': 11, 'lowopt': 1
        {'implicit': 1, 'coding': 5, 'bandwidth': 8, 'spreading':  6, 'lowopt': 0},
        {'implicit': 0, 'coding': 8, 'bandwidth': 5, 'spreading': 11, 'lowopt': 0},
        {'implicit': 1, 'coding': 5, 'bandwidth': 5, 'spreading':  6, 'lowopt': 0}]
-       
+
+def StringToBoolean(Value):
+    return (Value + 'F')[0] in ('1', 'T', 't', 'Y', 'y')
+
 class Tracker(object):
     def __init__(self):
         self.camera = None
@@ -98,7 +101,7 @@ class Tracker(object):
             # Camera settings
             # Altitude for switching image sizes and packet rates
             self.Settings_Camera_High = config.getint('Camera', 'High')
-            self.Settings_Camera_Rotate = config.getboolean('Camera', 'Rotate')
+            self.Settings_Camera_Rotate = StringToBoolean(config.get('Camera', 'Rotate'))
             
             # Full settings, low altitude
             self.Settings_Camera_LowFullPeriod = config.getint('Camera', 'LowFullPeriod')
@@ -136,7 +139,7 @@ class Tracker(object):
             self.Settings_SSDV_HighImageCount = config.getint('SSDV', 'HighImageCount')
             
             # Predictor settings
-            self.Settings_Prediction_Enabled = config.getboolean('Prediction', 'Enabled')
+            self.Settings_Prediction_Enabled = StringToBoolean(config.get('Prediction', 'Enabled'))
             self.Settings_Prediction_LandingAltitude = config.getint('Prediction', 'LandingAltitude')
             self.Settings_Prediction_DefaultCDA = config.getfloat('Prediction', 'DefaultCDA')
 
@@ -146,9 +149,9 @@ class Tracker(object):
                 self.Settings_APRS_SSID = config.getint('APRS', 'SSID')
                 self.Settings_APRS_Frequency = config.getfloat('APRS', 'Frequency')
                 self.Settings_APRS_WideAltitude = config.getint('APRS', 'WideAltitude')
-                self.Settings_APRS_HighUseWide2 = config.getboolean('APRS', 'HighUseWide2')
+                self.Settings_APRS_HighUseWide2 = StringToBoolean(config.get('APRS', 'HighUseWide2'))
                 self.Settings_APRS_TxInterval = config.getint('APRS', 'TxInterval')
-                self.Settings_APRS_PreEmphasis = config.getboolean('APRS', 'PreEmphasis')
+                self.Settings_APRS_PreEmphasis = StringToBoolean(config.get('APRS', 'PreEmphasis'))
                 self.Settings_APRS_Random = config.getint('APRS', 'Random')
                 self.Settings_APRS_TelemInterval = config.getint('APRS', 'TelemInterval')
             except:
@@ -184,11 +187,12 @@ class Tracker(object):
         self.avr.AddCommand('SI' + str(self.Settings_SSDV_LowImageCount) + ',' + str(self.Settings_SSDV_HighImageCount) + ',' + str(self.Settings_Camera_High))
 
         # APRS settings
+        print("APRS: " + self.Settings_APRS_Callsign)
         self.avr.AddCommand('AP' + self.Settings_APRS_Callsign)
         if self.Settings_APRS_Callsign != '':
             self.avr.AddCommand('AS' + str(self.Settings_APRS_SSID))
             self.avr.AddCommand('AF' + "{:.3f}".format(self.Settings_APRS_Frequency))
-            self.avr.AddCommand('AA' + str(Settings_APRS_WideAltitude))
+            self.avr.AddCommand('AA' + str(self.Settings_APRS_WideAltitude))
             self.avr.AddCommand('AI' + str(int(self.Settings_APRS_HighUseWide2)))
             self.avr.AddCommand('AI' + str(self.Settings_APRS_TxInterval))
             self.avr.AddCommand('AM' + str(int(self.Settings_APRS_PreEmphasis)))
