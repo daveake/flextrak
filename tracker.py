@@ -1,10 +1,6 @@
 from flextrak import *
 from time import sleep
 
-def extra_telemetry():
-	# Return any extra fields as CSV string
-    return ""
-
 def take_photo(filename, width, height, gps):
 	# sample code to take a photo
 	# Use the gps object if you want to add a telemetry overlay, or use different image sizes at different altitudes, for example
@@ -35,4 +31,17 @@ mytracker.start()
 
 print ("Loop ...")
 while True:
-	sleep(1)
+    # if you have extra sensor values to include in the telemetry, add them with lines like:
+    # mytracker.AddField(0, 12)
+    # The first value (0) is the field number from 0 to 3
+    # The second valve (12) is the value of that field
+
+    # ** If you are using floating point values, then scale them to be integers.  **
+
+    # The tracker will include this new value until you call thus routine with a different value
+    #
+    # ** VERY IMPORTANT **
+    #
+    # You also need to include the field in the field list.  These fields are I (field 0), through N (field 5).
+
+    sleep(5)

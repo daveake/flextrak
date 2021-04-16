@@ -130,4 +130,4 @@ dmypy.json
 
 /images
 *.NMEA
-
+log.txt

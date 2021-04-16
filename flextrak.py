@@ -17,6 +17,24 @@ Modes=[{'implicit': 0, 'coding': 8, 'bandwidth': 3, 'spreading': 11, 'lowopt': 1
 def StringToBoolean(Value):
     return (Value + 'F')[0] in ('1', 'T', 't', 'Y', 'y')
 
+def GetConfigInteger(config, section, value, default):
+    try:
+        return config.getint(section, value)
+    except:
+        return default
+
+def GetConfigBoolean(config, section, value, default):
+    try:
+        return StringToBoolean(config.get(section, value))
+    except:
+        return default
+        
+def GetConfigString(config, section, value, default):
+    try:
+        return config.get(section, value)
+    except:
+        return default
+
 class Tracker(object):
     def __init__(self):
         self.camera = None
@@ -73,6 +91,10 @@ class Tracker(object):
 
     def SSDVBufferEmpty(self):
         self.SendNextSSDVPacket = True
+    
+    def AddField(self, FieldIndex, FieldValue):
+        if (FieldIndex >= 0) and (FieldIndex <= 5):
+            self.avr.AddCommand('F' + str(FieldIndex) + "{:.1f}".format(FieldValue))
 
     def LoadSettings(self, filename):
         if os.path.isfile(filename):
@@ -90,6 +112,9 @@ class Tracker(object):
                 self.Settings_General_FakeGPS = config.get('General', 'FakeGPS')
             except:
                 pass
+                
+            self.Settings_Cutdown_Altitude = GetConfigInteger(config, 'Cutdown', 'Altitude', 0)
+            self.Settings_Cutdown_Time = GetConfigInteger(config, 'Cutdown', 'Time', 5)
             
             # GPS Settings
             self.Settings_GPS_FlightModeAltitude = config.get('GPS', 'FlightModeAltitude')
@@ -97,46 +122,51 @@ class Tracker(object):
             # LoRa settings
             self.Settings_LoRa_Frequency = config.get('LORA', 'Frequency')
             self.Settings_LoRa_Mode = config.getint('LORA', 'Mode')
+            self.Settings_LoRa_Cycle = GetConfigInteger(config, 'LORA', 'Cycle', 0)
+            self.Settings_LoRa_Slot = GetConfigInteger(config, 'LORA', 'Slot', -1)
+            self.Settings_LoRa_UplinkCode = GetConfigString(config, 'LORA', 'Uplink', '')
             
             # Camera settings
             # Altitude for switching image sizes and packet rates
-            self.Settings_Camera_High = config.getint('Camera', 'High')
-            self.Settings_Camera_Rotate = StringToBoolean(config.get('Camera', 'Rotate'))
-            
-            # Full settings, low altitude
-            self.Settings_Camera_LowFullPeriod = config.getint('Camera', 'LowFullPeriod')
-            self.Settings_Camera_LowFullWidth = config.getint('Camera', 'LowFullHeight')
-            self.Settings_Camera_LowFullHeight = config.getint('Camera', 'LowFullHeight')
+            self.Settings_Camera_Enabled = GetConfigBoolean(config, 'Camera', 'Enabled', True)
+            if self.Settings_Camera_Enabled:
+                self.Settings_Camera_High = config.getint('Camera', 'High')
+                self.Settings_Camera_Rotate = StringToBoolean(config.get('Camera', 'Rotate'))
                 
-            # Full settings, high altitude
-            self.Settings_Camera_HighFullPeriod = config.getint('Camera', 'HighFullPeriod')
-            self.Settings_Camera_HighFullWidth = config.getint('Camera', 'HighFullHeight')
-            self.Settings_Camera_HighFullHeight = config.getint('Camera', 'HighFullHeight')
-            
-            # Add schedule for full size images
-            if (self.Settings_Camera_LowFullPeriod > 0) or (self.Settings_Camera_HighFullPeriod > 0):
-                self.add_full_camera_schedule(lowperiod=self.Settings_Camera_LowFullPeriod, lowwidth=self.Settings_Camera_LowFullWidth, lowheight=self.Settings_Camera_LowFullHeight,
-                                              highperiod=self.Settings_Camera_HighFullPeriod, highwidth=self.Settings_Camera_HighFullWidth, highheight=self.Settings_Camera_HighFullHeight)
+                # Full settings, low altitude
+                self.Settings_Camera_LowFullPeriod = config.getint('Camera', 'LowFullPeriod')
+                self.Settings_Camera_LowFullWidth = config.getint('Camera', 'LowFullWidth')
+                self.Settings_Camera_LowFullHeight = config.getint('Camera', 'LowFullHeight')
+                    
+                # Full settings, high altitude
+                self.Settings_Camera_HighFullPeriod = config.getint('Camera', 'HighFullPeriod')
+                self.Settings_Camera_HighFullWidth = config.getint('Camera', 'HighFullWidth')
+                self.Settings_Camera_HighFullHeight = config.getint('Camera', 'HighFullHeight')
                 
-            # Radio settings, low altitude
-            self.Settings_Camera_LowRadioPeriod = config.getint('Camera', 'LowRadioPeriod')
-            self.Settings_Camera_LowRadioWidth = config.getint('Camera', 'LowRadioWidth')
-            self.Settings_Camera_LowRadioHeight = config.getint('Camera', 'LowRadioHeight')
-                           
-            # Full settings, high altitude
-            self.Settings_Camera_HighRadioPeriod = config.getint('Camera', 'HighRadioPeriod')
-            self.Settings_Camera_HighRadioWidth = config.getint('Camera', 'HighRadioWidth')
-            self.Settings_Camera_HighRadioHeight = config.getint('Camera', 'HighRadioHeight')
-            #self.add_lora_camera_schedule(callsign=self.Settings_General_PayloadID, period=self.Settings_Camera_RadioPeriod, width=self.Settings_Camera_RadioWidth, height=self.Settings_Camera_RadioHeight)
-            
-            # Add schedule for radio
-            if (self.Settings_Camera_LowRadioPeriod > 0) or (self.Settings_Camera_HighRadioPeriod):
-                self.add_lora_camera_schedule(callsign=self.Settings_General_PayloadID,
-                                              lowperiod=self.Settings_Camera_LowRadioPeriod, lowwidth=self.Settings_Camera_LowRadioWidth, lowheight=self.Settings_Camera_LowRadioHeight,
-                                              highperiod=self.Settings_Camera_HighRadioPeriod, highwidth=self.Settings_Camera_HighRadioWidth, highheight=self.Settings_Camera_HighRadioHeight)
-            # SSDV settings
-            self.Settings_SSDV_LowImageCount = config.getint('SSDV', 'LowImageCount')
-            self.Settings_SSDV_HighImageCount = config.getint('SSDV', 'HighImageCount')
+                # Add schedule for full size images
+                if (self.Settings_Camera_LowFullPeriod > 0) or (self.Settings_Camera_HighFullPeriod > 0):
+                    self.add_full_camera_schedule(lowperiod=self.Settings_Camera_LowFullPeriod, lowwidth=self.Settings_Camera_LowFullWidth, lowheight=self.Settings_Camera_LowFullHeight,
+                                                  highperiod=self.Settings_Camera_HighFullPeriod, highwidth=self.Settings_Camera_HighFullWidth, highheight=self.Settings_Camera_HighFullHeight)
+                    
+                # Radio settings, low altitude
+                self.Settings_Camera_LowRadioPeriod = config.getint('Camera', 'LowRadioPeriod')
+                self.Settings_Camera_LowRadioWidth = config.getint('Camera', 'LowRadioWidth')
+                self.Settings_Camera_LowRadioHeight = config.getint('Camera', 'LowRadioHeight')
+                               
+                # Full settings, high altitude
+                self.Settings_Camera_HighRadioPeriod = config.getint('Camera', 'HighRadioPeriod')
+                self.Settings_Camera_HighRadioWidth = config.getint('Camera', 'HighRadioWidth')
+                self.Settings_Camera_HighRadioHeight = config.getint('Camera', 'HighRadioHeight')
+                #self.add_lora_camera_schedule(callsign=self.Settings_General_PayloadID, period=self.Settings_Camera_RadioPeriod, width=self.Settings_Camera_RadioWidth, height=self.Settings_Camera_RadioHeight)
+                
+                # Add schedule for radio
+                if (self.Settings_Camera_LowRadioPeriod > 0) or (self.Settings_Camera_HighRadioPeriod):
+                    self.add_lora_camera_schedule(callsign=self.Settings_General_PayloadID,
+                                                  lowperiod=self.Settings_Camera_LowRadioPeriod, lowwidth=self.Settings_Camera_LowRadioWidth, lowheight=self.Settings_Camera_LowRadioHeight,
+                                                  highperiod=self.Settings_Camera_HighRadioPeriod, highwidth=self.Settings_Camera_HighRadioWidth, highheight=self.Settings_Camera_HighRadioHeight)
+                # SSDV settings
+                self.Settings_SSDV_LowImageCount = config.getint('SSDV', 'LowImageCount')
+                self.Settings_SSDV_HighImageCount = config.getint('SSDV', 'HighImageCount')
             
             # Predictor settings
             self.Settings_Prediction_Enabled = StringToBoolean(config.get('Prediction', 'Enabled'))
@@ -168,7 +198,11 @@ class Tracker(object):
         
         # // GPS Settings
         self.avr.AddCommand('GF' + str(self.Settings_GPS_FlightModeAltitude))
-        
+
+        # Cutdown Settings
+        self.avr.AddCommand('CC' + str(self.Settings_Cutdown_Altitude))
+        self.avr.AddCommand('CT' + str(self.Settings_Cutdown_Time))
+
         # // LoRa Settings
         self.avr.AddCommand('LF' + str(self.Settings_LoRa_Frequency))
         
@@ -178,13 +212,14 @@ class Tracker(object):
         self.avr.AddCommand('LS' + str(Modes[self.Settings_LoRa_Mode]['spreading']))
         self.avr.AddCommand('LL' + str(Modes[self.Settings_LoRa_Mode]['lowopt']))
         
-        # self.avr.AddCommand('LC' + str(self.Settings_LoRa_Count);
-        # LORA_Count:			Integer;
-        # LORA_CycleTime:		Integer;
-        # LORA_Slot:			Integer;
+        self.avr.AddCommand('LT' + str(self.Settings_LoRa_Cycle));
+        self.avr.AddCommand('LO' + str(self.Settings_LoRa_Slot));
+        
+        self.avr.AddCommand('LU' + str(self.Settings_LoRa_UplinkCode));
         
         # // SSDV Settings
-        self.avr.AddCommand('SI' + str(self.Settings_SSDV_LowImageCount) + ',' + str(self.Settings_SSDV_HighImageCount) + ',' + str(self.Settings_Camera_High))
+        if self.Settings_Camera_Enabled:
+            self.avr.AddCommand('SI' + str(self.Settings_SSDV_LowImageCount) + ',' + str(self.Settings_SSDV_HighImageCount) + ',' + str(self.Settings_Camera_High))
 
         # APRS settings
         print("APRS: " + self.Settings_APRS_Callsign)

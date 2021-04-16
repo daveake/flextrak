@@ -116,7 +116,7 @@ class AVR(object):
         elif Command == 'VER':
             self.Sensors['version'] = Parameters
         else:
-            print("UNKNOWN RESPONSE " + Command + '=' + Parameters)
+           print("UNKNOWN RESPONSE " + Command + '=' + Parameters)
 
     def ProcessLine(self, Line):
         
