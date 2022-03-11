@@ -43,6 +43,11 @@ class Tracker(object):
         self.ImageCallback = None
         self._WhenNewPosition = None
         self._WhenNewSentence = None
+        self._WhenNewBattery = None
+        self._WhenNewTemperatureInternal = None
+        self._WhenNewTemperatureExternal = None
+        self._WhenNewVersion = None
+        self._WhenNewPrediction = None
         self.SendNextSSDVPacket = False
         self.Predictor = None
 
@@ -301,6 +306,46 @@ class Tracker(object):
     def WhenNewPosition(self, value):
         self._WhenNewPosition = value
 
+    @property
+    def WhenNewBattery(self):
+        return self._WhenNewBattery
+
+    @WhenNewBattery.setter
+    def WhenNewBattery(self, value):
+        self._WhenNewBattery = value
+
+    @property
+    def WhenNewTemperatureInternal(self):
+        return self._WhenNewTemperatureInternal
+
+    @WhenNewTemperatureInternal.setter
+    def WhenNewTemperatureInternal(self, value):
+        self._WhenNewTemperatureInternal = value
+
+    @property
+    def WhenNewTemperatureExternal(self):
+        return self._WhenNewTemperatureExternal
+
+    @WhenNewTemperatureExternal.setter
+    def WhenNewTemperatureExternal(self, value):
+        self._WhenNewTemperatureExternal = value
+
+    @property
+    def WhenNewPrediction(self):
+        return self._WhenNewPrediction
+
+    @WhenNewPrediction.setter
+    def WhenNewPrediction(self, value):
+        self._WhenNewPrediction = value
+
+    @property
+    def WhenNewVersion(self):
+        return self._WhenNewVersion
+
+    @WhenNewVersion.setter
+    def WhenNewVersion(self, value):
+        self._WhenNewVersion = value
+
     def __tracker_thread(self):
         while True:
             # test if we need to send next SSDV packet yet
@@ -324,6 +369,10 @@ class Tracker(object):
         self.avr = AVR(self.Settings_General_SerialDevice, self.Settings_General_FakeGPS)
         self.avr.WhenNewSentence = self.GotNewSentence
         self.avr.WhenNewPosition = self.GotNewPosition
+        self.avr.WhenNewBattery = self._WhenNewBattery
+        self.avr.WhenNewTemperatureInternal = self._WhenNewTemperatureInternal
+        self.avr.WhenNewTemperatureExternal = self._WhenNewTemperatureExternal
+        self.avr.WhenNewVersion = self._WhenNewVersion
         self.avr.WhenSSDVReady = self.SSDVBufferEmpty
         
         self.avr.start()
@@ -343,6 +392,8 @@ class Tracker(object):
         # Predictor
         if self.Settings_Prediction_Enabled:
             self.Predictor = Predictor(self.Settings_Prediction_LandingAltitude, self.Settings_Prediction_DefaultCDA)
+            if self.WhenNewPrediction:
+                self.Predictor.WhenNewPrediction = self._WhenNewPrediction
 
         t = threading.Thread(target=self.__tracker_thread)
         t.daemon = True

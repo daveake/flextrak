@@ -17,6 +17,18 @@ def GotNewSentence(Sentence):
 def GotNewPosition(Position):
     print(str(Position['time']) + ', ' + "{:.5f}".format(Position['lat']) + ', ' + "{:.5f}".format(Position['lon']) + ', ' + str(Position['alt']) + ', ' + str(Position['sats']))
 
+def GotNewBattery(battery):
+	print('Battery voltage is', battery, 'V')
+
+def GotNewTemperatureInternal(temp):
+	print('Temperature internal is', temp, '°C')
+
+def GotNewTemperatureExternal(temp):
+	print('Temperature external is', temp, '°C')
+
+def GotNewPrediction(prediction):
+	print('Prediction is', prediction)
+
 print ("Load tracker ...")
 mytracker = Tracker()
 
@@ -25,6 +37,10 @@ mytracker.LoadSettings("flextrak.ini")
 # Callbacks
 mytracker.WhenNewSentence = GotNewSentence
 mytracker.WhenNewPosition = GotNewPosition
+mytracker.WhenNewBattery = GotNewBattery
+mytracker.WhenNewTemperatureInternal = GotNewTemperatureInternal
+mytracker.WhenNewTemperatureExternal = GotNewTemperatureExternal
+mytracker.WhenNewPrediction = GotNewPrediction
 
 print ("Start tracker ...")
 mytracker.start()
