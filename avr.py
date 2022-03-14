@@ -13,6 +13,10 @@ class AVR(object):
         self._WhenLockLost = None
         self._WhenNewPosition = None
         self._WhenNewSentence = None
+        self._WhenNewBattery = None  # Callback for Battery voltage
+        self._WhenNewTemperatureInternal = None  # Callback for internal temperature
+        self._WhenNewTemperatureExternal = None  # Callback for external temperature
+        self._WhenNewVersion = None  # Callback for version
         self._WhenSSDVReady = None
         self.IsOpen = False
         
@@ -109,12 +113,21 @@ class AVR(object):
                 self._WhenNewSentence(Parameters)
         elif Command == 'BATT':
             self.Sensors['battery_voltage'] = float(Parameters) / 1000.0
+            if self._WhenNewBattery:
+                self._WhenNewBattery(self.Sensors['battery_voltage'])
         elif Command == 'TEMP0':
             self.Sensors['internal_temperature'] = float(Parameters)
+            if self._WhenNewTemperatureInternal:
+                self._WhenNewTemperatureInternal(self.Sensors['internal_temperature'])
         elif Command == 'TEMP1':
             self.Sensors['external_temperature'] = float(Parameters)
+            if self._WhenNewTemperatureExternal:
+                self._WhenNewTemperatureExternal(self.Sensors['external_temperature'])
         elif Command == 'VER':
             self.Sensors['version'] = Parameters
+            if self._WhenNewVersion:
+                self._WhenNewVersion(self.Sensors['version'])
+
         else:
            print("UNKNOWN RESPONSE " + Command + '=' + Parameters)
 
@@ -241,7 +254,43 @@ class AVR(object):
     @WhenSSDVReady.setter
     def WhenSSDVReady(self, value):
         self._WhenSSDVReady = value
-    
+
+    # Callback for battery voltage
+    @property
+    def WhenNewBattery(self):
+        return self._WhenNewBattery
+
+    @WhenNewBattery.setter
+    def WhenNewBattery(self, value):
+        self._WhenNewBattery = value
+
+    # Callback for internal temperature
+    @property
+    def WhenNewTemperatureInternal(self):
+        return self._WhenNewTemperatureInternal
+
+    @WhenNewTemperatureInternal.setter
+    def WhenNewTemperatureInternal(self, value):
+        self._WhenNewTemperatureInternal = value
+
+    # Callback for external temperature
+    @property
+    def WhenNewTemperatureExternal(self):
+        return self._WhenNewTemperatureExternal
+
+    @WhenNewTemperatureExternal.setter
+    def WhenNewTemperatureExternal(self, value):
+        self._WhenNewTemperatureExternal = value
+
+    # Callback for version
+    @property
+    def WhenNewVersion(self):
+        return self._WhenNewVersion
+
+    @WhenNewVersion.setter
+    def WhenNewVersion(self, value):
+        self._WhenNewVersion = value
+
     def start(self):
         print ("Comms module started")
         self.open()

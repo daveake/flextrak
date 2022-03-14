@@ -31,6 +31,9 @@ class Predictor(object):
         for i in range(self.SlotCount):
             self.Deltas.append(Delta(0,0))
 
+        # Callback for a new prediction
+        # Is called everytime a new prediction is calculated
+        self._WhenNewPrediction = None
 
     def GetSlot(self, Altitude):
         Slot = int(Altitude // self.SlotSize)
@@ -164,5 +167,15 @@ class Predictor(object):
                 print('PREDICTOR: ' + str(Position['time']) + ', ' + "{:.5f}".format(Position['lat']) + ', ' + "{:.5f}".format(Position['lon']) + ', ' + str(Position['alt']) + ', ' + str(Position['sats']))
 
                 self.PreviousPosition = Position.copy()
-                
+
+        if self._WhenNewPrediction:
+            self._WhenNewPrediction(Result, self.FlightMode)
         return Result
+
+    @property
+    def WhenNewPrediction(self):
+        return self._WhenNewPrediction
+
+    @WhenNewPrediction.setter
+    def WhenNewPrediction(self, value):
+        self._WhenNewPrediction = value
