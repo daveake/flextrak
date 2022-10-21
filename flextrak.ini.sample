@@ -2,6 +2,7 @@
 SerialDevice=/dev/ttyAMA0
 PayloadID=FLEXTRAK
 FieldList=01234569ABCD
+SendFieldList=Y
 
 [Prediction]
 Enabled=True

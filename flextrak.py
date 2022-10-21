@@ -55,6 +55,7 @@ class Tracker(object):
         self.Settings_General_SerialDevice = '/dev/ttyAMA0';
         self.Settings_General_PayloadID = 'CHANGEME'
         self.Settings_General_FieldList = '01234569A'
+        self.Settings_General_SendFieldList = False
         self.Settings_General_FakeGPS = ''
         
         # LoRa settings
@@ -113,6 +114,7 @@ class Tracker(object):
             self.Settings_General_PayloadID = config.get('General', 'PayloadID')
             print ('Payload ID ' + self.Settings_General_PayloadID)
             self.Settings_General_FieldList = config.get('General', 'FieldList')
+            self.Settings_General_SendFieldList = GetConfigBoolean(config, 'General', 'SendFieldList', False)
             try:
                 self.Settings_General_FakeGPS = config.get('General', 'FakeGPS')
             except:
@@ -200,6 +202,7 @@ class Tracker(object):
         # // Common Settings
         self.avr.AddCommand('CP' + self.Settings_General_PayloadID)
         self.avr.AddCommand('CF' + self.Settings_General_FieldList)
+        self.avr.AddCommand('CL' + str(int(self.Settings_General_SendFieldList)))
         
         # // GPS Settings
         self.avr.AddCommand('GF' + str(self.Settings_GPS_FlightModeAltitude))
