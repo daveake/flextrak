@@ -26,8 +26,9 @@ def GotNewTemperatureInternal(temp):
 def GotNewTemperatureExternal(temp):
 	print('Temperature external is', temp, '°C')
 
-def GotNewPrediction(prediction):
-	print('Prediction is', prediction)
+def GotNewPrediction(prediction, flightmode):
+    if prediction:
+        print('Prediction is', prediction)
 
 print ("Load tracker ...")
 mytracker = Tracker()

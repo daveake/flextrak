@@ -16,6 +16,8 @@ https://github.com/daveake/HAB-Documentation/blob/main/FlexTrak%20Manual.pdf
 
 ## Releases
 
+V1.23	-	Fixed error in tracker.py when printing prediction
+
 V1.22	-	Added support to sending field list
 
 V1.20	-	Support for user-supplied telemetry fields.  Fix for full-size image dimensions.
